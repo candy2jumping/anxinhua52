@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#E8F5E9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="安心花">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="stylesheet" href="css/style.css">
+  <title>安心花 · 个人记账工作台</title>
+</head>
+<body>
+
+<div class="frame">
+  <!-- 顶部状态栏 -->
+  <div class="status-bar">
+    <div>🌿 安心花</div>
+    <div class="right">
+      <span id="clock">--:--</span>
+      <button class="menu-btn" onclick="openDrawer()">☰</button>
+    </div>
+  </div>
+
+  <!-- ============ 首页 ============ -->
+  <div class="tab" id="tab-home">
+    <div class="greeting">
+      <h1 id="greet-text">你好 🌿</h1>
+      <p>今天也要心里有数地花钱</p>
+    </div>
+
+    <div class="range-tabs" style="margin-bottom:12px">
+      <button data-range="today" class="active" onclick="setRange('today')">今日</button>
+      <button data-range="week" onclick="setRange('week')">本周</button>
+      <button data-range="month" onclick="setRange('month')">本月</button>
+    </div>
+
+    <!-- 核心：今天还能安心花 -->
+    <div class="card card-mint balance-card" onclick="openCalcDetail()">
+      <div class="balance-label" id="balance-label-text">🌞 今天还能安心花</div>
+      <div class="balance-amount" id="balance-amount">¥0</div>
+      <div class="balance-sub" id="balance-sub" onclick="event.stopPropagation(); openAsset()"></div>
+    </div>
+
+    <!-- 三元小卡 -->
+    <div class="tri-row">
+      <div class="mini-card">
+        <div class="mini-label" id="mini-spent-label">今日花了</div>
+        <div class="mini-value spent" id="mini-spent">¥0</div>
+      </div>
+      <div class="mini-card">
+        <div class="mini-label" id="mini-income-label">今日挣了</div>
+        <div class="mini-value income" id="mini-income">¥0</div>
+      </div>
+      <div class="mini-card">
+        <div class="mini-label">本月已存</div>
+        <div class="mini-value" id="mini-saved">¥0</div>
+      </div>
+    </div>
+
+    <!-- 快捷入口 -->
+    <div class="quick-row">
+      <button class="quick-btn" onclick="openBuy()">
+        <span class="quick-emoji">🤔</span>
+        <div><div class="quick-title">想买啥？</div><div class="quick-sub">该不该买</div></div>
+      </button>
+      <button class="quick-btn" onclick="openReview()">
+        <span class="quick-emoji">🌙</span>
+        <div><div class="quick-title">今日复盘</div><div class="quick-sub">钱花哪了</div></div>
+      </button>
+    </div>
+
+    <!-- 本月预算总览 -->
+    <div class="card">
+      <div class="section-head"><span>📊 本月预算总览</span></div>
+      <div class="budget-overview">
+        <div class="ring">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="var(--mint-50)" stroke-width="8"></circle>
+            <circle id="budget-ring-bar" cx="40" cy="40" r="34" fill="none" stroke="var(--mint-500)" stroke-width="8" stroke-linecap="round" stroke-dasharray="213.6" stroke-dashoffset="213.6"></circle>
+          </svg>
+          <div class="ring-text" id="budget-ring-pct">0%</div>
+        </div>
+        <div class="budget-info">
+          <div class="row"><span class="label">本月预算</span><span class="val" id="budget-total">¥0</span></div>
+          <div class="row"><span class="label">已花费</span><span class="val" id="budget-used">¥0</span></div>
+          <div class="row"><span class="label">剩余额度</span><span class="val green" id="budget-remain">¥0</span></div>
+          <div class="row"><span class="label">日均已花</span><span class="val" id="budget-daily">¥0</span></div>
+          <div class="row"><span class="label">日均可花</span><span class="val green" id="budget-remain-daily">¥0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 本月存钱进度 -->
+    <div class="card card-savings">
+      <div class="section-head"><span>🌱 本月存钱进度</span><span class="more">目标 <span id="savings-month-target">¥0</span></span></div>
+      <div style="height:6px;background:var(--mint-50);border-radius:3px;overflow:hidden;margin-bottom:8px">
+        <div id="savings-bar" style="height:100%;background:var(--mint-500);width:0%"></div>
+      </div>
+      <div style="font-size:13px;color:var(--ink-700)">已存 <strong id="savings-month-saved">¥0</strong> · 完成 <strong id="savings-pct">0%</strong></div>
+    </div>
+
+    <!-- 近 3 日账单 -->
+    <div class="card">
+      <div class="section-head"><span>🗓️ 近 3 日账单</span><span class="more" onclick="switchTab('ledger')">全部账单 ›</span></div>
+      <div id="recent-bills"></div>
+    </div>
+
+    <!-- 分类预算（重点关注） -->
+    <div class="card">
+      <div class="section-head"><span>🧩 分类预算 · 重点关注</span><span class="more" onclick="switchTab('plan')">全部 ›</span></div>
+      <div class="cat-list" id="top-cats"></div>
+    </div>
+  </div>
+
+  <!-- ============ 账本 ============ -->
+  <div class="tab hidden" id="tab-ledger">
+    <div class="section-head" style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:16px;font-weight:500">📖 账本</span>
+      <div class="ledger-tabs">
+        <button data-mode="detail" class="active" onclick="setLedgerMode('detail')">明细</button>
+        <button data-mode="cal" onclick="setLedgerMode('cal')">日历</button>
+      </div>
+    </div>
+
+    <div id="ledger-filter-row" class="filter-row">
+      <div class="dropdown">
+        <button class="filter-pill" onclick="toggleFilterMenu('type', event)"><span id="filter-type-label">全部</span> <span class="chev">▾</span></button>
+        <div class="dropdown-menu hidden" id="menu-type">
+          <div class="dd-item active" data-value="all" onclick="setFilter('type','all')">全部</div>
+          <div class="dd-item" data-value="out" onclick="setFilter('type','out')">支出</div>
+          <div class="dd-item" data-value="in" onclick="setFilter('type','in')">收入</div>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="filter-pill" onclick="toggleFilterMenu('cat', event)"><span id="filter-cat-label">全部分类</span> <span class="chev">▾</span></button>
+        <div class="dropdown-menu hidden" id="menu-cat"></div>
+      </div>
+    </div>
+
+    <input class="search-box" id="ledger-search" placeholder="🔍 搜索备注或分类" oninput="App.ledgerSearch=this.value; renderLedger()">
+    <div id="ledger-detail"></div>
+  </div>
+
+  <!-- ============ 记一笔 ============ -->
+  <div class="tab hidden" id="tab-add">
+    <div class="type-tabs">
+      <button data-type="out" class="active" onclick="setAddType('out')">支出</button>
+      <button data-type="in" onclick="setAddType('in')">收入</button>
+      <button data-type="transfer" onclick="setAddType('transfer')">转账</button>
+    </div>
+
+    <div class="amount-display">
+      <div class="label">金额（元）</div>
+      <input id="amount-input" type="number" inputmode="decimal" placeholder="0.00">
+    </div>
+
+    <div id="cat-grid" class="cat-grid"></div>
+
+    <div class="opt-fields">
+      <div class="opt-row" id="acct-row">
+        <div class="label">💳 账户</div>
+        <div class="val" id="opt-account" onclick="chooseAccount('from')"></div>
+      </div>
+      <div class="opt-row" id="transfer-rows" style="display:none">
+        <div style="flex:1"><div class="label">从</div><div class="val" id="opt-from" onclick="chooseAccount('from')"></div></div>
+        <div style="flex:1"><div class="label">到</div><div class="val" id="opt-to" onclick="chooseAccount('to')"></div></div>
+      </div>
+      <div class="opt-row">
+        <div class="label">📅 日期</div>
+        <div class="val" id="opt-date" onclick="chooseDate()"></div>
+      </div>
+      <div class="opt-row">
+        <div class="label">📝 备注</div>
+        <div class="val" id="opt-note" onclick="chooseNote()"></div>
+      </div>
+    </div>
+
+    <button class="submit-btn" onclick="submitAdd()">记一笔 🌱</button>
+  </div>
+
+  <!-- ============ 计划 ============ -->
+  <div class="tab hidden" id="tab-plan">
+    <div class="plan-tabs">
+      <button data-plan="budget" class="active" onclick="setPlanTab('budget')">预算</button>
+      <button data-plan="save" onclick="setPlanTab('save')">存钱</button>
+      <button data-plan="wish" onclick="setPlanTab('wish')">想买</button>
+    </div>
+    <div id="plan-container"></div>
+  </div>
+
+  <!-- ============ 分析 ============ -->
+  <div class="tab hidden" id="tab-analysis">
+    <div class="section-head"><span>📈 分析</span></div>
+    <div class="quad-row">
+      <div class="quad-card"><div class="quad-label">本月支出</div><div class="quad-value spent" id="a-spent">¥0</div></div>
+      <div class="quad-card"><div class="quad-label">本月收入</div><div class="quad-value income" id="a-income">¥0</div></div>
+      <div class="quad-card"><div class="quad-label">本月结余</div><div class="quad-value" id="a-net">¥0</div></div>
+      <div class="quad-card"><div class="quad-label">储蓄率</div><div class="quad-value" id="a-save">0%</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><span>🧩 分类消费占比与排行</span><span class="more">点开看明细</span></div>
+      <div id="a-cat-rank"></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><span>📉 近 7 日消费趋势</span></div>
+      <div class="trend-bar" id="a-trend"></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><span>🎯 本月预算执行</span></div>
+      <div id="a-budget-cmp"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 底部导航 -->
+<nav class="bottom-nav">
+  <div class="nav-item active" data-tab="home" onclick="switchTab('home')"><span class="ic">🏠</span>首页</div>
+  <div class="nav-item" data-tab="ledger" onclick="switchTab('ledger')"><span class="ic">📖</span>账本</div>
+  <div class="nav-item add" data-tab="add" onclick="switchTab('add')"><span class="ic">＋</span></div>
+  <div class="nav-item" data-tab="plan" onclick="switchTab('plan')"><span class="ic">🌱</span>计划</div>
+  <div class="nav-item" data-tab="analysis" onclick="switchTab('analysis')"><span class="ic">📊</span>分析</div>
+</nav>
+
+<!-- 抽屉 -->
+<div class="drawer-mask" id="drawer-mask" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer">
+  <div class="avatar">🌿</div>
+  <div class="name">我的工作台</div>
+  <div class="menu-list">
+    <div class="menu-item" onclick="openAccountManager()"><span class="ic">💳</span>账户与资金属性</div>
+    <div class="menu-item" onclick="openCategoryManager()"><span class="ic">🏷️</span>分类管理</div>
+    <div class="menu-item" onclick="openSupplyEdit()"><span class="ic">🔄</span>补给与消费规则</div>
+    <div class="menu-item" onclick="backupMenu()"><span class="ic">💾</span>数据备份与恢复</div>
+  </div>
+</aside>
+
+<!-- 模态：首次引导 -->
+<div class="modal hidden" id="modal-onboarding">
+  <div class="modal-bar"><span class="title" id="ob-title">初始化</span></div>
+  <div id="ob-content"></div>
+  <div id="ob-foot"></div>
+</div>
+
+<!-- 模态：管理（账户 / 分类） -->
+<div class="modal hidden" id="modal-manage">
+  <div class="modal-bar"><span class="title" id="modal-manage-title"></span><button class="close" onclick="closeView('manage')">✕</button></div>
+  <div id="modal-manage-content"></div>
+</div>
+
+<!-- 模态：计算详情 -->
+<div class="modal hidden" id="modal-calc">
+  <div class="modal-bar"><span class="title">🌞 计算详情</span><button class="close" onclick="closeView('calc')">✕</button></div>
+  <div id="calc-content"></div>
+</div>
+
+<!-- 模态：资产 -->
+<div class="modal hidden" id="modal-asset">
+  <div class="modal-bar"><span class="title">💰 我的资产</span><button class="close" onclick="closeView('asset')">✕</button></div>
+  <div id="asset-list"></div>
+</div>
+
+<!-- 模态：某天详情 -->
+<div class="modal hidden" id="modal-day">
+  <div class="modal-bar"><span class="title" id="day-title"></span><button class="close" onclick="closeView('day')">✕</button></div>
+  <div id="day-content"></div>
+</div>
+
+<!-- 模态：今日复盘 -->
+<div class="modal hidden" id="modal-review">
+  <div class="modal-bar"><span class="title">🌙 今日复盘</span><button class="close" onclick="closeView('review')">✕</button></div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="section-head"><span id="rev-date"></span></div>
+    <div class="tri-row">
+      <div class="mini-card"><div class="mini-label">支出</div><div class="mini-value spent" id="rev-spent">¥0</div></div>
+      <div class="mini-card"><div class="mini-label">收入</div><div class="mini-value income" id="rev-income">¥0</div></div>
+      <div class="mini-card"><div class="mini-label">净变化</div><div class="mini-value" id="rev-net">¥0</div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="section-head"><span>🌿 一句话复盘</span><button class="more" onclick="editReview(window.Calc.todayStr())">编辑</button></div>
+    <div id="review-txt" style="font-size:13px;line-height:1.7;color:var(--ink-700)"></div>
+  </div>
+  <div class="card">
+    <div class="section-head"><span>今日账单</span><span class="more">点账单可编辑</span></div>
+    <div id="review-cats"></div>
+  </div>
+</div>
+
+<!-- 模态：想买 -->
+<div class="modal hidden" id="modal-buy">
+  <div class="modal-bar"><span class="title">🤔 想买啥？</span><button class="close" onclick="closeView('buy')">✕</button></div>
+  <div class="amount-display">
+    <div class="label">这件多少钱（元）</div>
+    <input id="buy-input" type="number" inputmode="decimal" placeholder="0.00">
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="section-head"><span>属于哪个分类</span></div>
+    <div class="cat-grid" id="buy-cat-grid"></div>
+  </div>
+  <button class="submit-btn" onclick="computeBuy()">算一下 🧮</button>
+  <div class="buy-status" id="buy-result" style="display:none">
+    <div class="verdict" id="buy-verdict"></div>
+    <div class="reason" id="buy-reason"></div>
+  </div>
+</div>
+
+<!-- 脚本（顺序：计算 → 弹窗 → 数据 → 示例 → 渲染 → 管理 → 引导 → 入口） -->
+<script src="js/calc.js"></script>
+<script src="js/modals.js"></script>
+<script src="js/db.js"></script>
+<script src="js/demo-data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/manage.js"></script>
+<script src="js/onboarding.js"></script>
+<script src="js/init.js"></script>
+</body>
+</html>
