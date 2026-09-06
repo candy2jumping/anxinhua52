@@ -422,13 +422,47 @@ function chooseAccount(which) {
     }
   });
 }
+/* 容错解析用户日期：接受 YYYY-MM-DD / YYYY/M/D / YYYY-M-D（含空格、斜杠），
+   自动补零并拒绝假日期（如 2026-02-30、13 月等），返回 YYYY-MM-DD 或 null */
+function normalizeDate(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const s = String(v).trim().replace(/\//g, '-').replace(/\s+/g, '');
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() + 1 !== mo || dt.getDate() !== d) return null;
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+/* 记一笔的日期选择：先给常用日期一键选，再给原生日期滚轮补任意一天 */
 function chooseDate() {
-  X.appPrompt({
-    title: '选择日期', label: '格式 YYYY-MM-DD', value: App.pickedDate || C.todayStr(),
-    placeholder: C.todayStr(),
-    onConfirm: (v) => {
+  const t = C.todayStr();
+  const y = C.daysAgoStr(1);
+  const by = C.daysAgoStr(2);
+  X.appSheet({
+    title: '选择日期（可补填以前的账）',
+    options: [
+      { value: t,  label: '今天 · ' + C.mdOf(t) + ' 周' + C.weekdayOf(t) },
+      { value: y,  label: '昨天 · ' + C.mdOf(y) + ' 周' + C.weekdayOf(y) },
+      { value: by, label: '前天 · ' + C.mdOf(by) + ' 周' + C.weekdayOf(by) },
+      { value: '__custom__', label: '选择其他日期…', hint: '更早或更晚' },
+    ],
+    onSelect: (v) => {
       if (!v) return;
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { X.appToast('日期格式不对', 'error'); return; }
+      if (v === '__custom__') {
+        X.appPrompt({
+          title: '选择日期', label: '可填 YYYY-MM-DD / YYYY/M/D', value: App.pickedDate || C.todayStr(),
+          placeholder: C.todayStr(), type: 'date',
+          onConfirm: (cv) => {
+            if (cv === null) return;
+            const d = normalizeDate(cv);
+            if (!d) { X.appToast('日期无效，请重试', 'error'); return; }
+            App.pickedDate = d; renderAddOptional();
+          }
+        });
+        return;
+      }
       App.pickedDate = v; renderAddOptional();
     }
   });
